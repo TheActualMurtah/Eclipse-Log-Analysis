@@ -1,0 +1,6 @@
+  [#1: 1] x138215  While serving <URL>: hudson.security.AccessDeniedException3: anonymous is missing the Job<PATH> permission
+  [#2: 4] x3905  Skipped parameter `USE_TESTENV_PROPERTIES` as it is undefined on `Test_openjdk8_j9_extended.system_x86-64_linux` (<#NUM>). Set `-Dhudson.model.ParametersAction.keepUndefinedParameters=true` to allow undefined parameters to be injected as environment variables or `-Dhudson.model.ParametersAction.safeParameters=[comma-separated list]` to whitelist specific parameter names, even though it represents a security breach or `-Dhudson.model.ParametersAction.keepUndefinedParameters=false` to no longer show this message.
+  [#3: 3] x3184  Caught unhandled exception with ID cd3c03e7-e95f-45ae-861f-59774c73cf60 java.lang.NoSuchMethodError
+  [#4: 2] x2785  Error while serving <URL> java.lang.NoSuchMethodError
+  [#5:14] x508  Attempting to reconnect test-macstadium-macos1014-x64-<NUM>
+  [#6: 6] x438  git-mirrors » adoptium » git-skara-jdk23u <#NUM>
