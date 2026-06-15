@@ -10,7 +10,7 @@ This project proposes the development of an AI-powered log analysis assistant de
 4. Summarize and generate useful reporting on findings.
 
 ## Team
-Samual Yuan, Marcus White, Faisal Toosan, Hani Murtaza, Yuchen Zhou, Aashka
+Samuel Yuan, Marcus White, Faisal Toosan, Hani Murtaza, Yuchen Zhou, Aashka Shah
 # Jenkins Log Analyzer — Usage Guide
 
 A small Python toolkit that turns raw Jenkins logs into structured, queryable
