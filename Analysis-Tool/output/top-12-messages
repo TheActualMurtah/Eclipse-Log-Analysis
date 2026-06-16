@@ -1,0 +1,12 @@
+  [#1:96] x75411  Use of toString() on hudson.util.Secret from PluginClassLoader for lockable-resources/<PATH>(Utils.java:<NUM>). Prefer getPlainText() or getEncryptedValue() depending your needs. see <URL>
+  [#2:117] x39262  Connection <#NUM> from <PATH>:<NUM> failed: null
+  [#3:118] x39246  Accepted JNLP4-connect connection <#NUM> from <PATH>:<NUM>
+  [#4: 3] x9850  While serving <URL>: hudson.security.AccessDeniedException3: anonymous is missing the Job<PATH> permission
+  [#5:51] x2649  Skipped parameter `MODE` as it is undefined on `Test_openjdk26_hs_extended.system_ppc64_aix` (<#NUM>). Set `-Dhudson.model.ParametersAction.keepUndefinedParameters=true` to allow undefined parameters to be injected as environment variables or `-Dhudson.model.ParametersAction.safeParameters=[comma-separated list]` to whitelist specific parameter names, even though it represents a security breach or `-Dhudson.model.ParametersAction.keepUndefinedParameters=false` to no longer show this message.
+  [#6:11] x1616  Failed to read url with logo: <URL>
+  [#7: 2] x1066  error in build build-scripts<PATH> <#NUM> hudson.AbortException
+  [#8: 6] x889  Test_openjdk25_hs_extended.perf_x86-64_linux <#NUM>
+  [#9: 7] x571  Attempting to reconnect test-macstadium-macos1014-x64-<NUM>
+  [#10:20] x561  Unable to validate Jenkins resource '<PATH>'. java.net.SocketTimeoutException
+  [#11:21] x487  Icon 'accept.svg' not found as Jenkins resource
+  [#12:38] x444  git-mirrors » adoptium » git-skara-jdk <#NUM>

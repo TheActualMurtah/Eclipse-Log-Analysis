@@ -1,0 +1,177 @@
+[score: 71.965057] 2026-05-24T04:00:01.705943+02:00 jenkins-hetzner-ubuntu2004 CRON[847154]: (jenkins) CMD (bash -c "date; grep label queue.xml  | sed -e 's/<[^>]*>//g' -e 's/amp;//g' | sort | uniq -c" >> /home/jenkins/queuedepth.log)
+[score: 79.006148] 2026-05-24T03:59:54.664852+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Removed slice user-1001.slice - User Slice of UID 1001.
+[score: 79.008549] 2026-05-24T03:59:54.662451+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Stopped user-runtime-dir@1001.service - User Runtime Directory /run/user/1001.
+[score: 79.011234] 2026-05-24T03:59:54.659766+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: user-runtime-dir@1001.service: Deactivated successfully.
+[score: 79.013875] 2026-05-24T03:59:54.657125+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: run-user-1001.mount: Deactivated successfully.
+[score: 79.022585] 2026-05-24T03:59:54.648415+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Stopping user-runtime-dir@1001.service - User Runtime Directory /run/user/1001...
+[score: 79.031514] 2026-05-24T03:59:54.639486+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Stopped user@1001.service - User Manager for UID 1001.
+[score: 79.031652] 2026-05-24T03:59:54.639348+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: user@1001.service: Deactivated successfully.
+[score: 79.043396] 2026-05-24T03:59:54.627604+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Reached target exit.target - Exit the Session.
+[score: 79.043559] 2026-05-24T03:59:54.627441+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Finished systemd-exit.service - Exit the Session.
+[score: 79.043828] 2026-05-24T03:59:54.627172+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Reached target shutdown.target - Shutdown.
+[score: 79.044031] 2026-05-24T03:59:54.626969+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Removed slice app.slice - User Application Slice.
+[score: 79.04595] 2026-05-24T03:59:54.625050+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Closed gpg-agent-ssh.socket - GnuPG cryptographic agent (ssh-agent emulation).
+[score: 79.08239] 2026-05-24T03:59:54.588610+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Closed snapd.session-agent.socket - REST API socket for snapd user session agent.
+[score: 79.082846] 2026-05-24T03:59:54.588154+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Closed pk-debconf-helper.socket - debconf communication socket.
+[score: 79.085711] 2026-05-24T03:59:54.585289+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Closed keyboxd.socket - GnuPG public key management service.
+[score: 79.085804] 2026-05-24T03:59:54.585196+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Closed gpg-agent.socket - GnuPG cryptographic agent and passphrase cache.
+[score: 79.08603] 2026-05-24T03:59:54.584970+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Stopping gpg-agent-ssh.socket - GnuPG cryptographic agent (ssh-agent emulation)...
+[score: 79.101037] 2026-05-24T03:59:54.569963+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Closed gpg-agent-extra.socket - GnuPG cryptographic agent and passphrase cache (restricted).
+[score: 79.101476] 2026-05-24T03:59:54.569524+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Closed gpg-agent-browser.socket - GnuPG cryptographic agent and passphrase cache (access for web browsers).
+[score: 79.104299] 2026-05-24T03:59:54.566701+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Closed gcr-ssh-agent.socket - GCR ssh-agent wrapper.
+[score: 79.104371] 2026-05-24T03:59:54.566629+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Closed dirmngr.socket - GnuPG network certificate management daemon.
+[score: 79.104458] 2026-05-24T03:59:54.566542+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Closed dbus.socket - D-Bus User Message Bus Socket.
+[score: 79.104568] 2026-05-24T03:59:54.566432+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Stopped launchpadlib-cache-clean.timer - Clean up old files in the Launchpadlib cache.
+[score: 79.104756] 2026-05-24T03:59:54.566244+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Stopped target timers.target - Timers.
+[score: 79.104859] 2026-05-24T03:59:54.566141+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Stopped target sockets.target - Sockets.
+[score: 79.104948] 2026-05-24T03:59:54.566052+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Stopped target paths.target - Paths.
+[score: 79.105043] 2026-05-24T03:59:54.565957+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Stopped target basic.target - Basic System.
+[score: 79.105148] 2026-05-24T03:59:54.565852+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Stopped target default.target - Main User Target.
+[score: 79.105307] 2026-05-24T03:59:54.565693+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Activating special unit exit.target...
+[score: 79.105946] 2026-05-24T03:59:54.565054+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Stopping user@1001.service - User Manager for UID 1001...
+[score: 89.185301] 2026-05-24T03:59:44.485699+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: session-6729.scope: Deactivated successfully.
+[score: 89.479352] 2026-05-24T03:59:44.191648+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Started session-6729.scope - Session 6729 of User nagios.
+[score: 89.494444] 2026-05-24T03:59:44.176556+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Started user@1001.service - User Manager for UID 1001.
+[score: 89.494541] 2026-05-24T03:59:44.176459+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Startup finished in 256ms.
+[score: 89.494603] 2026-05-24T03:59:44.176397+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Reached target default.target - Main User Target.
+[score: 89.494702] 2026-05-24T03:59:44.176298+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Reached target basic.target - Basic System.
+[score: 89.494762] 2026-05-24T03:59:44.176238+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Reached target sockets.target - Sockets.
+[score: 89.494916] 2026-05-24T03:59:44.176084+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Listening on gpg-agent-ssh.socket - GnuPG cryptographic agent (ssh-agent emulation).
+[score: 89.526245] 2026-05-24T03:59:44.144755+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Listening on dbus.socket - D-Bus User Message Bus Socket.
+[score: 89.530877] 2026-05-24T03:59:44.140123+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Listening on snapd.session-agent.socket - REST API socket for snapd user session agent.
+[score: 89.530989] 2026-05-24T03:59:44.140011+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Listening on pk-debconf-helper.socket - debconf communication socket.
+[score: 89.531114] 2026-05-24T03:59:44.139886+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Listening on keyboxd.socket - GnuPG public key management service.
+[score: 89.531365] 2026-05-24T03:59:44.139635+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Listening on gpg-agent.socket - GnuPG cryptographic agent and passphrase cache.
+[score: 89.531571] 2026-05-24T03:59:44.139429+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Starting gpg-agent-ssh.socket - GnuPG cryptographic agent (ssh-agent emulation)...
+[score: 89.541871] 2026-05-24T03:59:44.129129+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Listening on gpg-agent-extra.socket - GnuPG cryptographic agent and passphrase cache (restricted).
+[score: 89.541944] 2026-05-24T03:59:44.129056+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Listening on gpg-agent-browser.socket - GnuPG cryptographic agent and passphrase cache (access for web browsers).
+[score: 89.542013] 2026-05-24T03:59:44.128987+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Listening on gcr-ssh-agent.socket - GCR ssh-agent wrapper.
+[score: 89.542135] 2026-05-24T03:59:44.128865+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Listening on dirmngr.socket - GnuPG network certificate management daemon.
+[score: 89.543486] 2026-05-24T03:59:44.127514+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Starting dbus.socket - D-Bus User Message Bus Socket...
+[score: 89.550339] 2026-05-24T03:59:44.120661+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Reached target timers.target - Timers.
+[score: 89.550453] 2026-05-24T03:59:44.120547+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Reached target paths.target - Paths.
+[score: 89.550599] 2026-05-24T03:59:44.120401+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Started launchpadlib-cache-clean.timer - Clean up old files in the Launchpadlib cache.
+[score: 89.55091] 2026-05-24T03:59:44.120090+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Created slice app.slice - User Application Slice.
+[score: 89.562182] 2026-05-24T03:59:44.108818+02:00 jenkins-hetzner-ubuntu2004 systemd[847110]: Queued start job for default target default.target.
+[score: 89.766284] 2026-05-24T03:59:43.904716+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Starting user@1001.service - User Manager for UID 1001...
+[score: 89.777951] 2026-05-24T03:59:43.893049+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Finished user-runtime-dir@1001.service - User Runtime Directory /run/user/1001.
+[score: 89.791813] 2026-05-24T03:59:43.879187+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Starting user-runtime-dir@1001.service - User Runtime Directory /run/user/1001...
+[score: 89.805682] 2026-05-24T03:59:43.865318+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Created slice user-1001.slice - User Slice of UID 1001.
+[score: 115.005046] 2026-05-24T03:59:18.665954+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Removed slice user-1001.slice - User Slice of UID 1001.
+[score: 115.006313] 2026-05-24T03:59:18.664687+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Stopped user-runtime-dir@1001.service - User Runtime Directory /run/user/1001.
+[score: 115.006366] 2026-05-24T03:59:18.664634+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: user-runtime-dir@1001.service: Deactivated successfully.
+[score: 115.006577] 2026-05-24T03:59:18.664423+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: run-user-1001.mount: Deactivated successfully.
+[score: 115.020063] 2026-05-24T03:59:18.650937+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Stopping user-runtime-dir@1001.service - User Runtime Directory /run/user/1001...
+[score: 115.034473] 2026-05-24T03:59:18.636527+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Stopped user@1001.service - User Manager for UID 1001.
+[score: 115.035258] 2026-05-24T03:59:18.635742+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: user@1001.service: Deactivated successfully.
+[score: 115.052204] 2026-05-24T03:59:18.618796+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Reached target exit.target - Exit the Session.
+[score: 115.05229] 2026-05-24T03:59:18.618710+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Finished systemd-exit.service - Exit the Session.
+[score: 115.052467] 2026-05-24T03:59:18.618533+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Reached target shutdown.target - Shutdown.
+[score: 115.054205] 2026-05-24T03:59:18.616795+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Removed slice app.slice - User Application Slice.
+[score: 115.05598] 2026-05-24T03:59:18.615020+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Closed gpg-agent-ssh.socket - GnuPG cryptographic agent (ssh-agent emulation).
+[score: 115.094377] 2026-05-24T03:59:18.576623+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Closed snapd.session-agent.socket - REST API socket for snapd user session agent.
+[score: 115.09448] 2026-05-24T03:59:18.576520+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Closed pk-debconf-helper.socket - debconf communication socket.
+[score: 115.094606] 2026-05-24T03:59:18.576394+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Closed keyboxd.socket - GnuPG public key management service.
+[score: 115.095073] 2026-05-24T03:59:18.575927+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Closed gpg-agent.socket - GnuPG cryptographic agent and passphrase cache.
+[score: 115.095276] 2026-05-24T03:59:18.575724+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Stopping gpg-agent-ssh.socket - GnuPG cryptographic agent (ssh-agent emulation)...
+[score: 115.103642] 2026-05-24T03:59:18.567358+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Closed gpg-agent-extra.socket - GnuPG cryptographic agent and passphrase cache (restricted).
+[score: 115.10375] 2026-05-24T03:59:18.567250+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Closed gpg-agent-browser.socket - GnuPG cryptographic agent and passphrase cache (access for web browsers).
+[score: 115.103848] 2026-05-24T03:59:18.567152+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Closed gcr-ssh-agent.socket - GCR ssh-agent wrapper.
+[score: 115.103926] 2026-05-24T03:59:18.567074+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Closed dirmngr.socket - GnuPG network certificate management daemon.
+[score: 115.104026] 2026-05-24T03:59:18.566974+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Closed dbus.socket - D-Bus User Message Bus Socket.
+[score: 115.104121] 2026-05-24T03:59:18.566879+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Stopped launchpadlib-cache-clean.timer - Clean up old files in the Launchpadlib cache.
+[score: 115.104215] 2026-05-24T03:59:18.566785+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Stopped target timers.target - Timers.
+[score: 115.104309] 2026-05-24T03:59:18.566691+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Stopped target sockets.target - Sockets.
+[score: 115.104379] 2026-05-24T03:59:18.566621+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Stopped target paths.target - Paths.
+[score: 115.104446] 2026-05-24T03:59:18.566554+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Stopped target basic.target - Basic System.
+[score: 115.10455] 2026-05-24T03:59:18.566450+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Stopped target default.target - Main User Target.
+[score: 115.104791] 2026-05-24T03:59:18.566209+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Activating special unit exit.target...
+[score: 115.109387] 2026-05-24T03:59:18.561613+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Stopping user@1001.service - User Manager for UID 1001...
+[score: 125.26436] 2026-05-24T03:59:08.406640+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: session-6727.scope: Deactivated successfully.
+[score: 144.012745] 2026-05-24T04:03:37.683745+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Created slice user-1001.slice - User Slice of UID 1001.
+[score: 144.022831] 2026-05-24T04:03:37.693831+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Starting user-runtime-dir@1001.service - User Runtime Directory /run/user/1001...
+[score: 144.049959] 2026-05-24T04:03:37.720959+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Finished user-runtime-dir@1001.service - User Runtime Directory /run/user/1001.
+[score: 144.060243] 2026-05-24T04:03:37.731243+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Starting user@1001.service - User Manager for UID 1001...
+[score: 144.314899] 2026-05-24T04:03:37.985899+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Queued start job for default target default.target.
+[score: 144.326136] 2026-05-24T04:03:37.997136+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Created slice app.slice - User Application Slice.
+[score: 144.326493] 2026-05-24T04:03:37.997493+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Started launchpadlib-cache-clean.timer - Clean up old files in the Launchpadlib cache.
+[score: 144.326667] 2026-05-24T04:03:37.997667+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Reached target paths.target - Paths.
+[score: 144.326777] 2026-05-24T04:03:37.997777+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Reached target timers.target - Timers.
+[score: 144.327201] 2026-05-24T04:03:37.998201+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Starting dbus.socket - D-Bus User Message Bus Socket...
+[score: 144.327385] 2026-05-24T04:03:37.998385+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Listening on dirmngr.socket - GnuPG network certificate management daemon.
+[score: 144.327516] 2026-05-24T04:03:37.998516+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Listening on gcr-ssh-agent.socket - GCR ssh-agent wrapper.
+[score: 144.327628] 2026-05-24T04:03:37.998628+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Listening on gpg-agent-browser.socket - GnuPG cryptographic agent and passphrase cache (access for web browsers).
+[score: 144.327741] 2026-05-24T04:03:37.998741+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Listening on gpg-agent-extra.socket - GnuPG cryptographic agent and passphrase cache (restricted).
+[score: 144.332822] 2026-05-24T04:03:38.003822+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Starting gpg-agent-ssh.socket - GnuPG cryptographic agent (ssh-agent emulation)...
+[score: 144.333014] 2026-05-24T04:03:38.004014+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Listening on gpg-agent.socket - GnuPG cryptographic agent and passphrase cache.
+[score: 144.333104] 2026-05-24T04:03:38.004104+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Listening on keyboxd.socket - GnuPG public key management service.
+[score: 144.333196] 2026-05-24T04:03:38.004196+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Listening on pk-debconf-helper.socket - debconf communication socket.
+[score: 144.333297] 2026-05-24T04:03:38.004297+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Listening on snapd.session-agent.socket - REST API socket for snapd user session agent.
+[score: 144.3446] 2026-05-24T04:03:38.015600+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Listening on dbus.socket - D-Bus User Message Bus Socket.
+[score: 144.380199] 2026-05-24T04:03:38.051199+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Listening on gpg-agent-ssh.socket - GnuPG cryptographic agent (ssh-agent emulation).
+[score: 144.38364] 2026-05-24T04:03:38.054640+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Reached target sockets.target - Sockets.
+[score: 144.383807] 2026-05-24T04:03:38.054807+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Reached target basic.target - Basic System.
+[score: 144.3851] 2026-05-24T04:03:38.056100+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Started user@1001.service - User Manager for UID 1001.
+[score: 144.386086] 2026-05-24T04:03:38.057086+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Reached target default.target - Main User Target.
+[score: 144.386283] 2026-05-24T04:03:38.057283+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Startup finished in 310ms.
+[score: 144.391029] 2026-05-24T04:03:38.062029+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Started session-6732.scope - Session 6732 of User nagios.
+[score: 155.641323] 2026-05-24T03:58:38.029677+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Started session-6727.scope - Session 6727 of User nagios.
+[score: 155.643549] 2026-05-24T03:58:38.027451+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Started user@1001.service - User Manager for UID 1001.
+[score: 155.643694] 2026-05-24T03:58:38.027306+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Startup finished in 254ms.
+[score: 155.643805] 2026-05-24T03:58:38.027195+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Reached target default.target - Main User Target.
+[score: 155.643902] 2026-05-24T03:58:38.027098+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Reached target basic.target - Basic System.
+[score: 155.644015] 2026-05-24T03:58:38.026985+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Reached target sockets.target - Sockets.
+[score: 155.644191] 2026-05-24T03:58:38.026809+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Listening on gpg-agent-ssh.socket - GnuPG cryptographic agent (ssh-agent emulation).
+[score: 155.656168] 2026-05-24T03:58:38.014832+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Listening on dbus.socket - D-Bus User Message Bus Socket.
+[score: 155.677934] 2026-05-24T03:58:37.993066+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Listening on snapd.session-agent.socket - REST API socket for snapd user session agent.
+[score: 155.678077] 2026-05-24T03:58:37.992923+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Listening on pk-debconf-helper.socket - debconf communication socket.
+[score: 155.678239] 2026-05-24T03:58:37.992761+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Listening on keyboxd.socket - GnuPG public key management service.
+[score: 155.678425] 2026-05-24T03:58:37.992575+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Listening on gpg-agent.socket - GnuPG cryptographic agent and passphrase cache.
+[score: 155.678688] 2026-05-24T03:58:37.992312+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Starting gpg-agent-ssh.socket - GnuPG cryptographic agent (ssh-agent emulation)...
+[score: 155.680238] 2026-05-24T03:58:37.990762+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Listening on gpg-agent-extra.socket - GnuPG cryptographic agent and passphrase cache (restricted).
+[score: 155.680475] 2026-05-24T03:58:37.990525+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Listening on gpg-agent-browser.socket - GnuPG cryptographic agent and passphrase cache (access for web browsers).
+[score: 155.680779] 2026-05-24T03:58:37.990221+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Listening on gcr-ssh-agent.socket - GCR ssh-agent wrapper.
+[score: 155.681055] 2026-05-24T03:58:37.989945+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Listening on dirmngr.socket - GnuPG network certificate management daemon.
+[score: 155.681342] 2026-05-24T03:58:37.989658+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Starting dbus.socket - D-Bus User Message Bus Socket...
+[score: 155.683441] 2026-05-24T03:58:37.987559+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Reached target timers.target - Timers.
+[score: 155.683582] 2026-05-24T03:58:37.987418+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Reached target paths.target - Paths.
+[score: 155.683815] 2026-05-24T03:58:37.987185+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Started launchpadlib-cache-clean.timer - Clean up old files in the Launchpadlib cache.
+[score: 155.684124] 2026-05-24T03:58:37.986876+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Created slice app.slice - User Application Slice.
+[score: 155.694994] 2026-05-24T03:58:37.976006+02:00 jenkins-hetzner-ubuntu2004 systemd[847058]: Queued start job for default target default.target.
+[score: 155.940362] 2026-05-24T03:58:37.730638+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Starting user@1001.service - User Manager for UID 1001...
+[score: 155.943381] 2026-05-24T03:58:37.727619+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Finished user-runtime-dir@1001.service - User Runtime Directory /run/user/1001.
+[score: 155.955995] 2026-05-24T03:58:37.715005+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Starting user-runtime-dir@1001.service - User Runtime Directory /run/user/1001...
+[score: 155.969328] 2026-05-24T03:58:37.701672+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Created slice user-1001.slice - User Slice of UID 1001.
+[score: 160.050172] 2026-05-24T04:03:53.721172+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Started session-6734.scope - Session 6734 of User nagios.
+[score: 160.23946] 2026-05-24T04:03:53.910460+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: session-6734.scope: Deactivated successfully.
+[score: 174.782223] 2026-05-24T04:04:08.453223+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: session-6732.scope: Deactivated successfully.
+[score: 184.893403] 2026-05-24T04:04:18.564403+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Stopping user@1001.service - User Manager for UID 1001...
+[score: 184.896525] 2026-05-24T04:04:18.567525+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Activating special unit exit.target...
+[score: 184.896709] 2026-05-24T04:04:18.567709+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Stopped target default.target - Main User Target.
+[score: 184.896807] 2026-05-24T04:04:18.567807+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Stopped target basic.target - Basic System.
+[score: 184.896891] 2026-05-24T04:04:18.567891+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Stopped target paths.target - Paths.
+[score: 184.896968] 2026-05-24T04:04:18.567968+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Stopped target sockets.target - Sockets.
+[score: 184.897034] 2026-05-24T04:04:18.568034+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Stopped target timers.target - Timers.
+[score: 184.897101] 2026-05-24T04:04:18.568101+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Stopped launchpadlib-cache-clean.timer - Clean up old files in the Launchpadlib cache.
+[score: 184.897174] 2026-05-24T04:04:18.568174+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Closed dbus.socket - D-Bus User Message Bus Socket.
+[score: 184.897225] 2026-05-24T04:04:18.568225+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Closed dirmngr.socket - GnuPG network certificate management daemon.
+[score: 184.897281] 2026-05-24T04:04:18.568281+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Closed gcr-ssh-agent.socket - GCR ssh-agent wrapper.
+[score: 184.897364] 2026-05-24T04:04:18.568364+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Closed gpg-agent-browser.socket - GnuPG cryptographic agent and passphrase cache (access for web browsers).
+[score: 184.897444] 2026-05-24T04:04:18.568444+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Closed gpg-agent-extra.socket - GnuPG cryptographic agent and passphrase cache (restricted).
+[score: 184.903717] 2026-05-24T04:04:18.574717+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Stopping gpg-agent-ssh.socket - GnuPG cryptographic agent (ssh-agent emulation)...
+[score: 184.903874] 2026-05-24T04:04:18.574874+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Closed gpg-agent.socket - GnuPG cryptographic agent and passphrase cache.
+[score: 184.903949] 2026-05-24T04:04:18.574949+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Closed keyboxd.socket - GnuPG public key management service.
+[score: 184.904004] 2026-05-24T04:04:18.575004+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Closed pk-debconf-helper.socket - debconf communication socket.
+[score: 184.904067] 2026-05-24T04:04:18.575067+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Closed snapd.session-agent.socket - REST API socket for snapd user session agent.
+[score: 184.934354] 2026-05-24T04:04:18.605354+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Closed gpg-agent-ssh.socket - GnuPG cryptographic agent (ssh-agent emulation).
+[score: 184.936032] 2026-05-24T04:04:18.607032+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Removed slice app.slice - User Application Slice.
+[score: 184.936201] 2026-05-24T04:04:18.607201+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Reached target shutdown.target - Shutdown.
+[score: 184.93727] 2026-05-24T04:04:18.608270+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Finished systemd-exit.service - Exit the Session.
+[score: 184.937411] 2026-05-24T04:04:18.608411+02:00 jenkins-hetzner-ubuntu2004 systemd[847311]: Reached target exit.target - Exit the Session.
+[score: 184.947047] 2026-05-24T04:04:18.618047+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: user@1001.service: Deactivated successfully.
+[score: 184.947793] 2026-05-24T04:04:18.618793+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Stopped user@1001.service - User Manager for UID 1001.
+[score: 184.959048] 2026-05-24T04:04:18.630048+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Stopping user-runtime-dir@1001.service - User Runtime Directory /run/user/1001...
+[score: 184.973404] 2026-05-24T04:04:18.644404+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: run-user-1001.mount: Deactivated successfully.
+[score: 184.977136] 2026-05-24T04:04:18.648136+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: user-runtime-dir@1001.service: Deactivated successfully.
+[score: 184.977572] 2026-05-24T04:04:18.648572+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Stopped user-runtime-dir@1001.service - User Runtime Directory /run/user/1001.
+[score: 184.980652] 2026-05-24T04:04:18.651652+02:00 jenkins-hetzner-ubuntu2004 systemd[1]: Removed slice user-1001.slice - User Slice of UID 1001.

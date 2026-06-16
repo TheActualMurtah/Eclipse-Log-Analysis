@@ -191,12 +191,13 @@ now **write a file and return `None`**, while `level_counts` returns a value.
 | `fatal_events(events)` | Active events whose level is fatal (`SEVERE`, `FATAL`, or `ERROR`), with line number and timestamp. | writes `output/fatal-events` |
 | `level_counts(events)` | Tally of how many active events occurred at each level. | **returns** a `dict` |
 | `in_window(events, center, before, after)` | Events within `[center - before, center + after]`. | writes a file named from the window |
+| `sys_correspond(date, path, threshold)` | Events within `[date - threshold, date + threshold]` from the syslog at path are printed, ordered by distance |
 
 The `center` argument of `in_window` is flexible: pass a `datetime`, a raw
 Jenkins timestamp string (`"2026-06-02 22:17:45.108+0000"`), or the ISO string
 produced in the JSON export. The `before` and `after` arguments are
 `datetime.timedelta` objects, e.g. `timedelta(hours=1)` or
-`timedelta(minutes=30)`.
+`timedelta(minutes=30)`. Same for sys_correspond
 
 ---
 
