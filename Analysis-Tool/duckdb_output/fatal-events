@@ -1,0 +1,33 @@
+Fatal events (SEVERE / FATAL / ERROR)
+────────────────────────────────────────────────────────────
+  line 103226 at 2026-06-03 03:42:13.198000-04:00  [SEVERE]
+    A thread (Workspace clean-up thread/546583) died unexpectedly due to an uncaught exception. This may leave your server corrupted and usually indicates a software bug.
+    java.io.EOFException
+    	at java.base/java.io.ObjectInputStream$PeekInputStream.readFully(ObjectInputStream.java:2933)
+    	at java.base/java.io.ObjectInputStream$BlockDataInputStream.readShort(ObjectInputStream.java:3428)
+    	at java.base/java.io.ObjectInputStream.readStreamHeader(ObjectInputStream.java:985)
+    	at java.base/java.io.ObjectInputStream.<init>(ObjectInputStream.java:416)
+    	at hudson.remoting.ObjectInputStreamEx.<init>(ObjectInputStreamEx.java:50)
+    	at hudson.remoting.Command.readFrom(Command.java:141)
+    	at hudson.remoting.Command.readFrom(Command.java:127)
+    	at hudson.remoting.AbstractSynchronousByteArrayCommandTransport.read(AbstractSynchronousByteArrayCommandTransport.java:35)
+    	at hudson.remoting.SynchronousCommandTransport$ReaderThread.run(SynchronousCommandTransport.java:62)
+    Caused: java.io.IOException: Unexpected termination of the channel
+    	at hudson.remoting.SynchronousCommandTransport$ReaderThread.run(SynchronousCommandTransport.java:80)
+    Also:   hudson.remoting.Channel$CallSiteStackTrace: Remote call to test-ibmcloud-rhel9-x64-2
+    		at hudson.remoting.Channel.attachCallSiteStackTrace(Channel.java:1916)
+    		at hudson.remoting.Request.call(Request.java:204)
+    		at hudson.remoting.Channel.call(Channel.java:1107)
+    		at hudson.FilePath.act(FilePath.java:1217)
+    		at hudson.FilePath.act(FilePath.java:1206)
+    		at hudson.model.WorkspaceCleanupThread.execute(WorkspaceCleanupThread.java:102)
+    		at hudson.model.AsyncPeriodicWork.lambda$doRun$0(AsyncPeriodicWork.java:110)
+    		at java.base/java.lang.Thread.run(Thread.java:1583)
+    Caused: hudson.remoting.RequestAbortedException
+    	at hudson.remoting.Request.abort(Request.java:358)
+    	at hudson.remoting.Channel.terminate(Channel.java:1189)
+    	at hudson.remoting.SynchronousCommandTransport$ReaderThread.run(SynchronousCommandTransport.java:95)
+
+  line 103839 at 2026-06-03 03:47:23.705000-04:00  [SEVERE]
+    Could not persist node: java.io.IOException: Cannot save actions for StepAtomNode[id=191, exec=CpsFlowExecution[build-scripts/openjdk25-pipeline#194]] for completed execution CpsFlowExecution[build-scripts/openjdk25-pipeline#194]: [org.jenkinsci.plugins.workflow.cps.actions.ArgumentsActionImpl@1bd0185e, org.jenkinsci.plugins.workflow.actions.TimingAction@3edf62ae, org.jenkinsci.plugins.workflow.support.actions.LogStorageAction@22b05a0e, org.jenkinsci.plugins.workflow.actions.LabelAction@36456d0c, io.jenkins.blueocean.listeners.NodeDownstreamBuildAction@51bfcbb, io.jenkins.blueocean.listeners.NodeDownstreamBuildAction@51c6d77]
+
