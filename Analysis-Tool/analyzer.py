@@ -367,13 +367,13 @@ def sys_correspond(jenkins_time: TimeLike, syspath: Path, threshold: timedelta) 
             if syslog_match:
                 dt_string=syslog_match.group("DATE")+" "+syslog_match.group("TIME")
                 syslog_ts=parse_timestamp(dt_string)
-                delta_secs = abs((syslog_ts - jenkins_ts).total_seconds()) 
-                if timedelta(seconds=delta_secs)<threshold:
+                delta_secs = ((syslog_ts - jenkins_ts).total_seconds()) 
+                if abs(timedelta(seconds=delta_secs))<threshold:
                     good_lines.append((delta_secs,line))
     with open(output_path/f'sys-match-{jenkins_time}', "w", encoding="UTF-8") as f:
         good_lines.sort(key=lambda x: x[0])
         for line in good_lines:
-            f.write(f'[score: {line[0]}] {line[1]}')
+            f.write(f'[delay: {line[0]}] {line[1]}')
     
 
 
