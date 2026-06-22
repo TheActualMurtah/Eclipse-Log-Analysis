@@ -297,7 +297,7 @@ class RuleSet:
 FATAL_LEVELS = {"SEVERE", "FATAL", "ERROR"}
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-output_path = SCRIPT_DIR / "output"
+output_path = SCRIPT_DIR / "analyzer_output"
 output_path.mkdir(exist_ok=True)
 
 
