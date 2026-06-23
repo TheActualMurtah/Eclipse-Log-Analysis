@@ -357,6 +357,26 @@ def in_window(events: list[LogEvent], center: TimeLike,
             if e.timestamp and lo <= e.timestamp <= hi:
                 f.write(f"  line {e.line_start} at {e.timestamp} ,{e.level}: {e.message}\n")
 
+def sys_correspond(jenkins_time: TimeLike, syspath: Path, threshold: timedelta) -> None:
+    SYSLOG_RE_LINE=re.compile(r'(?P<DATE>\d{4}-\d{2}-\d{2})T(?P<TIME>\d{2}:\d{2}:\d{2}\.\d+[+-]\d\d:\d\d) (?P<SYSTEM>.*\[\d*\]): (?P<MESSAGE>.*)')
+    good_lines=[]
+    jenkins_ts=parse_timestamp(jenkins_time)
+    with open(syspath,"r",encoding="utf-8") as file:
+        for line in file:
+            syslog_match=SYSLOG_RE_LINE.match(line)
+            if syslog_match:
+                dt_string=syslog_match.group("DATE")+" "+syslog_match.group("TIME")
+                syslog_ts=parse_timestamp(dt_string)
+                delta_secs = ((syslog_ts - jenkins_ts).total_seconds()) 
+                if abs(timedelta(seconds=delta_secs))<threshold:
+                    good_lines.append((delta_secs,line))
+    with open(output_path/f'sys-match-{jenkins_time}', "w", encoding="UTF-8") as f:
+        good_lines.sort(key=lambda x: x[0])
+        for line in good_lines:
+            f.write(f'[delay: {line[0]}] {line[1]}')
+    
+
+
 
 # --------------------------------------------------------------------------- #
 # 7. Convenience entry point
@@ -378,10 +398,10 @@ def to_json(events: list[LogEvent], indent: int = 2) -> str:
 
 if __name__ == "__main__":
     import sys
-    input_path=Path.cwd()/Path("sample-logs","jenkins","jenkins.log.crash")
+    input_path=Path.cwd()/Path("sample-logs","jenkins","jenkins.log.24052026")
     evs = analyze(sys.argv[1] if len(sys.argv) > 1 else input_path)
     print(f"parsed {len(evs)} events\n")
     print("level counts:", level_counts(evs))
-    top_templates(evs, 6)
+    top_templates(evs, 12)
     fatal_events(evs)
-    in_window(evs, "2026-05-19 11:41:44.713000+00:00", timedelta(hours=1), timedelta(minutes=20))
+    sys_correspond("2026-05-24 02:01:13.671000+00:00", Path("sample-logs","systems","syslog.1"),timedelta(seconds=313))
