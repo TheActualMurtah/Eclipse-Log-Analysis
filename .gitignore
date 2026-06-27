@@ -1,3 +1,5 @@
 sample-logs/
 analyzer_output/
+duckdb_output/
+*.duckdb
 .DS_Store
