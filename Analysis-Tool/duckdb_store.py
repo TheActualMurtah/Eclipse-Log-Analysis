@@ -27,7 +27,7 @@ from typing import Optional
 import duckdb
 
 # Import from analyzer without touching it
-from analyzer import analyze, active, LogEvent, parse_timestamp, TimeLike
+from analyzer import analyze, LogEvent, parse_timestamp, TimeLike
 
 # Output directory for preset query results — sits next to this script
 SCRIPT_DIR = Path(__file__).resolve().parent
