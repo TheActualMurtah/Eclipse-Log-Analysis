@@ -27,7 +27,7 @@ from typing import Optional
 import duckdb
 
 # Import from analyzer without touching it
-from analyzer import analyze, LogEvent, parse_timestamp, TimeLike
+from analyzer import analyze, active, LogEvent, parse_timestamp, TimeLike
 
 # Output directory for preset query results — sits next to this script
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -216,23 +216,40 @@ def q_fatal_events(
     print(f"  fatal events       → {out}")
 
 
-def q_in_window(
+def q_time_filter(
     con: duckdb.DuckDBPyConnection,
-    center: TimeLike,
-    before: timedelta,
-    after: timedelta,
+    lo: Optional[str] = None,
+    hi: Optional[str] = None,
     source_file: Optional[str] = None,
 ) -> None:
     """
-    Events within [center - before, center + after].
-    center may be a datetime or a raw Jenkins timestamp string.
-    """
-    center_dt = parse_timestamp(center)
-    lo = center_dt - before
-    hi = center_dt + after
+    Events in a time range.
 
-    where = "WHERE timestamp BETWEEN ? AND ?"
-    params: list = [lo, hi]
+    lo / hi are ISO or Jenkins timestamp strings.
+    If neither is given, defaults to the last 12 hours of data in the DB.
+    If only lo is given, returns everything from lo onward.
+    If only hi is given, returns everything up to hi.
+    """
+    # ── resolve lo/hi against actual data range if not supplied ─────────── #
+    data_min, data_max = con.execute(
+        "SELECT min(timestamp), max(timestamp) FROM log_events"
+    ).fetchone()
+
+    if lo is None and hi is None:
+        # default: last 12 hours of whatever is in the database
+        hi_dt  = data_max
+        lo_dt  = data_max - timedelta(hours=12)
+        label  = "last-12h"
+    else:
+        lo_dt = parse_timestamp(lo) if lo else data_min
+        hi_dt = parse_timestamp(hi) if hi else data_max
+        # build a short label for the filename
+        lo_tag = str(lo_dt).replace(" ", "T").replace(":", "-")[:19]
+        hi_tag = str(hi_dt).replace(" ", "T").replace(":", "-")[:19]
+        label  = f"{lo_tag}_to_{hi_tag}"
+
+    where  = "WHERE NOT ignored AND timestamp BETWEEN ? AND ?"
+    params: list = [lo_dt, hi_dt]
     if source_file:
         where += " AND source_file = ?"
         params.append(source_file)
@@ -247,17 +264,237 @@ def q_in_window(
         params,
     ).fetchall()
 
-    out = OUTPUT_DIR / f"window-{str(center_dt).replace(' ', 'T').replace(':', '-')}"
+    out = OUTPUT_DIR / f"time-filter-{label}"
     with open(out, "w", encoding="utf-8") as f:
-        f.write(f"Time window: {lo}  →  {hi}\n")
+        f.write(f"Time filter: {lo_dt}  →  {hi_dt}\n")
         f.write("─" * 60 + "\n")
         if not rows:
-            f.write("  (no events in this window)\n")
+            f.write("  (no events in this range)\n")
         else:
             for line, ts, level, msg in rows:
                 f.write(f"  line {line:<7} {ts}  [{level:<8}]  {msg}\n")
-            f.write(f"\n  ({len(rows)} events total in window)\n")
-    print(f"  time window        → {out}")
+            f.write(f"\n  ({len(rows)} events total)\n")
+    print(f"  time filter        → {out}")
+
+
+def q_by_level(
+    con: duckdb.DuckDBPyConnection,
+    level: str,
+    source_file: Optional[str] = None,
+) -> None:
+    """
+    Every active event at the given log level.
+    level should be one of: INFO, WARNING, SEVERE, ERROR, FATAL.
+    """
+    level_upper = level.upper()
+
+    where  = "WHERE NOT ignored AND level = ?"
+    params: list = [level_upper]
+    if source_file:
+        where += " AND source_file = ?"
+        params.append(source_file)
+
+    rows = con.execute(
+        f"""
+        SELECT line_start, timestamp, level, logger, message, stack_trace
+        FROM log_events
+        {where}
+        ORDER BY timestamp
+        """,
+        params,
+    ).fetchall()
+
+    out = OUTPUT_DIR / f"level-{level_upper}"
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(f"All {level_upper} events ({len(rows)} total)\n")
+        f.write("─" * 60 + "\n")
+        if not rows:
+            f.write("  (none)\n")
+        else:
+            for line, ts, lvl, logger, msg, stack in rows:
+                f.write(f"\n  line {line} at {ts}\n")
+                f.write(f"  logger:  {logger}\n")
+                f.write(f"  message: {msg}\n")
+                if stack:
+                    for stack_line in stack.splitlines():
+                        f.write(f"    {stack_line}\n")
+    print(f"  level={level_upper:<8}       → {out}")
+
+
+def q_by_logger(
+    con: duckdb.DuckDBPyConnection,
+    logger_pattern: str,
+    source_file: Optional[str] = None,
+) -> None:
+    """
+    Every active event whose logger contains logger_pattern (case-insensitive).
+    e.g. logger_pattern="SSHLauncher" matches h.plugins.sshslaves.SSHLauncher
+    """
+    where  = "WHERE NOT ignored AND lower(logger) LIKE lower(?)"
+    params: list = [f"%{logger_pattern}%"]
+    if source_file:
+        where += " AND source_file = ?"
+        params.append(source_file)
+
+    rows = con.execute(
+        f"""
+        SELECT line_start, timestamp, level, logger, message, stack_trace
+        FROM log_events
+        {where}
+        ORDER BY timestamp
+        """,
+        params,
+    ).fetchall()
+
+    # safe filename — strip characters that are bad in filenames
+    safe_pattern = logger_pattern.replace("/", "-").replace("\\", "-")
+    out = OUTPUT_DIR / f"logger-{safe_pattern}"
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(f"Events from logger matching '{logger_pattern}' ({len(rows)} total)\n")
+        f.write("─" * 60 + "\n")
+        if not rows:
+            f.write("  (none)\n")
+        else:
+            for line, ts, level, logger, msg, stack in rows:
+                f.write(f"\n  line {line} at {ts}  [{level}]\n")
+                f.write(f"  logger:  {logger}\n")
+                f.write(f"  message: {msg}\n")
+                if stack:
+                    for stack_line in stack.splitlines():
+                        f.write(f"    {stack_line}\n")
+    print(f"  logger='{logger_pattern}'    → {out}")
+
+
+def q_by_template(
+    con: duckdb.DuckDBPyConnection,
+    template_id: int,
+    source_file: Optional[str] = None,
+) -> None:
+    """
+    Every active event belonging to a given DRAIN3 template cluster.
+    Use q_top_templates first to find the template_id you want.
+    """
+    where  = "WHERE NOT ignored AND template_id = ?"
+    params: list = [template_id]
+    if source_file:
+        where += " AND source_file = ?"
+        params.append(source_file)
+
+    rows = con.execute(
+        f"""
+        SELECT line_start, timestamp, level, message, stack_trace, template
+        FROM log_events
+        {where}
+        ORDER BY timestamp
+        """,
+        params,
+    ).fetchall()
+
+    template_str = rows[0][5] if rows else "unknown"
+
+    out = OUTPUT_DIR / f"template-{template_id}"
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(f"Template #{template_id} — {len(rows)} occurrences\n")
+        f.write(f"Pattern: {template_str}\n")
+        f.write("─" * 60 + "\n")
+        if not rows:
+            f.write("  (none)\n")
+        else:
+            for line, ts, level, msg, stack, tmpl in rows:
+                f.write(f"\n  line {line} at {ts}  [{level}]\n")
+                f.write(f"  message: {msg}\n")
+                if stack:
+                    for stack_line in stack.splitlines():
+                        f.write(f"    {stack_line}\n")
+    print(f"  template #{template_id:<5}       → {out}")
+
+
+def q_by_tag(
+    con: duckdb.DuckDBPyConnection,
+    tag: str,
+    source_file: Optional[str] = None,
+) -> None:
+    """
+    Every active event carrying the given tag.
+    Tags are populated by RuleSet during analyze() and stored as a JSON
+    array string, e.g. '["ssh-failure"]' — this does a substring match
+    on that string, which is safe because tag names don't contain quotes.
+    """
+    where  = "WHERE NOT ignored AND tags LIKE ?"
+    params: list = [f'%"{tag}"%']
+    if source_file:
+        where += " AND source_file = ?"
+        params.append(source_file)
+
+    rows = con.execute(
+        f"""
+        SELECT line_start, timestamp, level, logger, message, stack_trace, tags
+        FROM log_events
+        {where}
+        ORDER BY timestamp
+        """,
+        params,
+    ).fetchall()
+
+    out = OUTPUT_DIR / f"tag-{tag}"
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(f"Events tagged '{tag}' ({len(rows)} total)\n")
+        f.write("─" * 60 + "\n")
+        if not rows:
+            f.write("  (none — check that a rules file was loaded with --rules)\n")
+        else:
+            for line, ts, level, logger, msg, stack, tags_raw in rows:
+                f.write(f"\n  line {line} at {ts}  [{level}]\n")
+                f.write(f"  logger: {logger}\n")
+                f.write(f"  message: {msg}\n")
+                f.write(f"  tags: {tags_raw}\n")
+                if stack:
+                    for stack_line in stack.splitlines():
+                        f.write(f"    {stack_line}\n")
+    print(f"  tag='{tag}'           → {out}")
+
+
+def q_tag_summary(
+    con: duckdb.DuckDBPyConnection,
+    source_file: Optional[str] = None,
+) -> None:
+    """
+    Breakdown of how many events carry each tag.
+    Useful as a quick check that rules actually did something.
+    """
+    where = "WHERE NOT ignored AND tags != '[]'"
+    params = []
+    if source_file:
+        where += " AND source_file = ?"
+        params.append(source_file)
+
+    rows = con.execute(
+        f"SELECT tags, count(*) AS n FROM log_events {where} GROUP BY tags ORDER BY n DESC",
+        params,
+    ).fetchall()
+
+    # also report ignored count, since suppression doesn't show up as a tag
+    ignored_where = "WHERE ignored"
+    ignored_params = []
+    if source_file:
+        ignored_where += " AND source_file = ?"
+        ignored_params.append(source_file)
+    ignored_count = con.execute(
+        f"SELECT count(*) FROM log_events {ignored_where}", ignored_params
+    ).fetchone()[0]
+
+    out = OUTPUT_DIR / "tag-summary"
+    with open(out, "w", encoding="utf-8") as f:
+        f.write("Tag summary\n")
+        f.write("─" * 40 + "\n")
+        f.write(f"  ignored (suppressed by rules): {ignored_count}\n\n")
+        if not rows:
+            f.write("  (no tags found — no rules file loaded, or no tag rules matched)\n")
+        else:
+            for tags_raw, n in rows:
+                tag_list = json.loads(tags_raw)
+                f.write(f"  {', '.join(tag_list):<30} x{n}\n")
+    print(f"  tag summary        → {out}")
 
 
 def q_stack_traces(
@@ -314,6 +551,61 @@ def already_loaded(con: duckdb.DuckDBPyConnection, source_file: str) -> bool:
         [source_file],
     ).fetchone()[0]
     return count > 0
+
+
+def load_rules(rules_path: Optional[str]) -> Optional[list[dict]]:
+    """
+    Load a rules JSON file for analyzer.py's RuleSet.from_list().
+
+    Expected format — a JSON array of rule objects matching analyzer.Rule's
+    fields, e.g.:
+
+        [
+          {"name": "suppress_noise", "action": "ignore",
+           "logger_regex": "ContextHandler"},
+          {"name": "tag_ssh_failures", "action": "tag",
+           "logger_regex": "SSHLauncher", "tag": "ssh-failure"}
+        ]
+
+    Returns None if rules_path is None (no rules requested).
+    Raises a clear error if the file is missing or malformed, rather than
+    letting analyzer.py fail with a less obvious error deep in RuleSet.
+    """
+    if rules_path is None:
+        return None
+
+    path = Path(rules_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Rules file not found: {path}")
+
+    try:
+        rules = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Rules file is not valid JSON: {path}\n  {e}")
+
+    if not isinstance(rules, list):
+        raise ValueError(
+            f"Rules file must contain a JSON array of rule objects, got {type(rules).__name__}: {path}"
+        )
+
+    valid_actions = {"ignore", "tag", "set_level"}
+    for i, rule in enumerate(rules):
+        if not isinstance(rule, dict):
+            raise ValueError(f"Rule #{i} is not an object: {rule!r}")
+        if "name" not in rule:
+            raise ValueError(f"Rule #{i} is missing required field 'name': {rule!r}")
+        action = rule.get("action", "ignore")
+        if action not in valid_actions:
+            raise ValueError(
+                f"Rule '{rule.get('name')}' has invalid action '{action}'. "
+                f"Must be one of: {valid_actions}"
+            )
+        if action == "tag" and not rule.get("tag"):
+            raise ValueError(f"Rule '{rule.get('name')}' has action='tag' but no 'tag' value")
+        if action == "set_level" and not rule.get("set_level"):
+            raise ValueError(f"Rule '{rule.get('name')}' has action='set_level' but no 'set_level' value")
+
+    return rules
 
 
 # --------------------------------------------------------------------------- #
@@ -411,7 +703,7 @@ def run_interactive_shell(con: duckdb.DuckDBPyConnection) -> None:
     then press Enter to run.
     """
     print("\n── Interactive SQL shell ─────────────────────────────────────")
-    print("Type SQL ending with ; to run. .schema for columns. .help for help. .quit to exit.\n")
+    print("Type SQL ending with ; to run. .schema for columns. .quit to exit.\n")
 
     buffer: list[str] = []
 
@@ -530,10 +822,22 @@ def main() -> None:
         action="store_true",
         help="After loading, drop into an interactive SQL shell",
     )
+    parser.add_argument(
+        "--rules",
+        metavar="PATH",
+        help="Path to a JSON rules file (ignore/tag/set_level), applied during parsing. "
+             "Only takes effect when the file is actually being parsed — i.e. not "
+             "already loaded and not --query-only.",
+    )
     args = parser.parse_args()
 
     log_path = Path(args.log_file).resolve()
     source_file = str(log_path)
+
+    try:
+        rules = load_rules(args.rules)
+    except (FileNotFoundError, ValueError) as e:
+        parser.error(str(e))
 
     con = open_db(args.db)
     print(f"Database: {args.db}")
@@ -544,28 +848,87 @@ def main() -> None:
         if already_loaded(con, source_file):
             print(f"Already loaded: {log_path.name} — skipping insertion")
             print("  (pass --query-only to just run queries, or use a fresh DB)")
+            if rules:
+                print("  NOTE: --rules was given but this file is already loaded.")
+                print("        Rules only apply at parse time. To re-apply rules,")
+                print("        use a fresh --db, or delete this file's rows first.")
         else:
             print(f"Parsing: {log_path.name} ...")
-            events = analyze(log_path)
+            if rules:
+                print(f"  applying rules from: {args.rules}")
+            events = analyze(log_path, rules=rules)
             print(f"  parsed {len(events)} events")
             n = insert_events(con, events, source_file)
             print(f"  inserted {n} rows into log_events")
             inserted = True
+    elif rules:
+        print("  NOTE: --rules has no effect with --query-only (no parsing happens).")
 
-    # ── Preset queries ───────────────────────────────────────────────────── #
+    # ── Preset queries (always run) ──────────────────────────────────────── #
     print(f"\nWriting query results for: {log_path.name}")
     print(f"  output dir: {OUTPUT_DIR}")
+
     q_level_counts(con, source_file)
     q_top_templates(con, n=10, source_file=source_file)
     q_fatal_events(con, source_file)
     q_stack_traces(con, source_file)
-    q_in_window(
-        con,
-        center="2026-06-03 07:42:13.198+0000",
-        before=timedelta(minutes=10),
-        after=timedelta(minutes=5),
-        source_file=source_file,
-    )
+
+    # time filter — last 12 hours of data in the DB
+    q_time_filter(con, lo=None, hi=None, source_file=source_file)
+
+    # level filters — WARNING and SEVERE always worth having as separate files
+    q_by_level(con, "WARNING", source_file)
+    q_by_level(con, "SEVERE", source_file)
+
+    # logger filter — top logger by event count among WARNING/SEVERE events
+    top_logger = con.execute(
+        """
+        SELECT logger
+        FROM log_events
+        WHERE NOT ignored AND level IN ('WARNING', 'SEVERE') AND logger IS NOT NULL
+        GROUP BY logger
+        ORDER BY count(*) DESC
+        LIMIT 1
+        """
+    ).fetchone()
+    if top_logger:
+        q_by_logger(con, top_logger[0], source_file)
+
+    # template filter — top template by frequency
+    top_template = con.execute(
+        """
+        SELECT template_id
+        FROM log_events
+        WHERE NOT ignored AND template_id IS NOT NULL
+        GROUP BY template_id
+        ORDER BY count(*) DESC
+        LIMIT 1
+        """
+    ).fetchone()
+    if top_template:
+        q_by_template(con, top_template[0], source_file)
+
+    # tags — summary always runs; per-tag files run for whatever tags exist
+    q_tag_summary(con, source_file)
+
+    distinct_tags_where = "WHERE NOT ignored AND tags != '[]'"
+    distinct_tags_params = []
+    if source_file:
+        distinct_tags_where += " AND source_file = ?"
+        distinct_tags_params.append(source_file)
+
+    tag_rows = con.execute(
+        f"SELECT DISTINCT tags FROM log_events {distinct_tags_where}",
+        distinct_tags_params,
+    ).fetchall()
+
+    seen_tags: set[str] = set()
+    for (tags_raw,) in tag_rows:
+        for t in json.loads(tags_raw):
+            seen_tags.add(t)
+
+    for tag in sorted(seen_tags):
+        q_by_tag(con, tag, source_file)
 
     con.close()
     if inserted:
