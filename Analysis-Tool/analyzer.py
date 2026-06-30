@@ -39,6 +39,10 @@ TS_FMT = "%Y-%m-%d %H:%M:%S.%f%z"
 # Anything that can stand in for a point in time when calling the query helpers.
 TimeLike = Union[datetime, str]
 
+# Default path for the drain3 snapshot — shared across all analyze() calls so
+# template IDs remain stable across files.
+DEFAULT_DRAIN_STATE = Path(__file__).resolve().parent / "drain3_state.bin"
+
 
 def parse_timestamp(value: TimeLike) -> datetime:
     """
@@ -205,12 +209,15 @@ def clean_for_drain(ev: LogEvent, include_throwable_type: bool = True) -> str:
 class TemplateExtractor:
     """Wraps drain3. Falls back to a no-op if drain3 isn't installed."""
 
-    def __init__(self):
+    def __init__(self, persistence_path: Optional[Path] = None):
         self.miner = None
+        if persistence_path is None:
+            persistence_path = DEFAULT_DRAIN_STATE
         try:
             from drain3 import TemplateMiner
             from drain3.template_miner_config import TemplateMinerConfig
             from drain3.masking import MaskingInstruction
+            from drain3.file_persistence import FilePersistence
 
             cfg = TemplateMinerConfig()
             cfg.profiling_enabled = False
@@ -224,7 +231,8 @@ class TemplateExtractor:
                 MaskingInstruction(r"\b\d+\b", "NUM"),
             ]
             cfg.drain_sim_th = 0.4   # similarity threshold; tune to taste
-            self.miner = TemplateMiner(config=cfg)
+            persistence = FilePersistence(str(persistence_path))
+            self.miner = TemplateMiner(persistence_handler=persistence, config=cfg)
         except Exception as e:  # drain3 missing or failed to init
             self._reason = str(e)
 
@@ -382,11 +390,12 @@ def sys_correspond(jenkins_time: TimeLike, syspath: Path, threshold: timedelta) 
 # 7. Convenience entry point
 # --------------------------------------------------------------------------- #
 
-def analyze(path: Path, rules: Optional[list[dict]] = None) -> list[LogEvent]:
+def analyze(path: Path, rules: Optional[list[dict]] = None,
+            persistence_path: Optional[Path] = None) -> list[LogEvent]:
     with open(path, "r", encoding="utf-8", errors="replace") as f:
         text = f.read()
     events = JenkinsLogParser().parse(text)
-    TemplateExtractor().assign(events)
+    TemplateExtractor(persistence_path=persistence_path).assign(events)
     if rules:
         RuleSet.from_list(rules).apply(events)
     return events
