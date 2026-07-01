@@ -3,3 +3,4 @@ analyzer_output/
 duckdb_output/
 *.duckdb
 .DS_Store
+drain3_state.bin
