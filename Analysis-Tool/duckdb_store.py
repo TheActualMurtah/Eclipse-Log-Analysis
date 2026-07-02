@@ -22,17 +22,60 @@ import argparse
 import json
 from datetime import timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import duckdb
 
 # Import from analyzer without touching it
 from analyzer import analyze, active, LogEvent, parse_timestamp, TimeLike
 
-# Output directory for preset query results — sits next to this script
+# Output directory structure — sits next to this script
+# Each category gets its own subfolder matching the categories in the docs.
 SCRIPT_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = SCRIPT_DIR / "duckdb_output"
-OUTPUT_DIR.mkdir(exist_ok=True)
+
+OUT_OVERVIEW   = OUTPUT_DIR / "overview"    # level-counts, top-templates, tag-summary
+OUT_DEEP_DIVE  = OUTPUT_DIR / "deep-dive"   # fatal-events, stack-traces, level-WARNING/SEVERE
+OUT_TIME       = OUTPUT_DIR / "time"        # time-filter-*
+OUT_PATTERN    = OUTPUT_DIR / "pattern"     # logger-*, template-*
+OUT_RULES      = OUTPUT_DIR / "rules"       # tag-{tagname} per-tag files
+OUT_CROSS_FILE = OUTPUT_DIR / "cross-file"  # cross-file-templates, trend-template-*
+OUT_ON_DEMAND  = OUTPUT_DIR / "on-demand"   # compare-*
+
+for _d in (OUTPUT_DIR, OUT_OVERVIEW, OUT_DEEP_DIVE, OUT_TIME,
+           OUT_PATTERN, OUT_RULES, OUT_CROSS_FILE, OUT_ON_DEMAND):
+    _d.mkdir(exist_ok=True)
+
+# A query's source_file argument can scope to:
+#   None        -> every loaded file
+#   "a.log"     -> exactly one file
+#   ["a", "b"]  -> an arbitrary subset of files
+SourceFileArg = Optional[Union[str, list[str]]]
+
+
+def source_file_clause(source_file: SourceFileArg) -> tuple[str, list]:
+    """
+    Build the SQL fragment and parameters for filtering by source_file.
+
+    Returns ("", []) when source_file is None — no filter, every file.
+    Returns ("AND source_file = ?", [path]) for a single string.
+    Returns ("AND source_file IN (?, ?, ...)", [paths]) for a list.
+
+    Every q_* function calls this once instead of repeating the same
+    if/elif logic, so list-of-files support only had to be written here.
+    """
+    if source_file is None:
+        return "", []
+    if isinstance(source_file, str):
+        return "AND source_file = ?", [source_file]
+    # list/tuple of paths
+    paths = list(source_file)
+    if not paths:
+        # empty list means "match nothing" rather than "match everything" —
+        # an empty IN (...) is invalid SQL, so use a clause that's always false
+        return "AND 1 = 0", []
+    placeholders = ", ".join("?" for _ in paths)
+    return f"AND source_file IN ({placeholders})", paths
 
 # --------------------------------------------------------------------------- #
 # Schema
@@ -117,13 +160,10 @@ def insert_events(
 # Queries
 # --------------------------------------------------------------------------- #
 
-def q_level_counts(con: duckdb.DuckDBPyConnection, source_file: Optional[str] = None) -> None:
+def q_level_counts(con: duckdb.DuckDBPyConnection, source_file: SourceFileArg = None) -> None:
     """Count of active events grouped by log level."""
-    where = "WHERE NOT ignored"
-    params = []
-    if source_file:
-        where += " AND source_file = ?"
-        params.append(source_file)
+    clause, params = source_file_clause(source_file)
+    where = f"WHERE NOT ignored {clause}"
 
     rows = con.execute(
         f"""
@@ -136,7 +176,7 @@ def q_level_counts(con: duckdb.DuckDBPyConnection, source_file: Optional[str] = 
         params,
     ).fetchall()
 
-    out = OUTPUT_DIR / "level-counts"
+    out = OUT_OVERVIEW / "level-counts"
     with open(out, "w", encoding="utf-8") as f:
         f.write("Level counts\n")
         f.write("─" * 30 + "\n")
@@ -148,14 +188,11 @@ def q_level_counts(con: duckdb.DuckDBPyConnection, source_file: Optional[str] = 
 def q_top_templates(
     con: duckdb.DuckDBPyConnection,
     n: int = 10,
-    source_file: Optional[str] = None,
+    source_file: SourceFileArg = None,
 ) -> None:
     """Most frequent DRAIN3 templates across active, non-null-template events."""
-    where = "WHERE NOT ignored AND template_id IS NOT NULL"
-    params = []
-    if source_file:
-        where += " AND source_file = ?"
-        params.append(source_file)
+    clause, params = source_file_clause(source_file)
+    where = f"WHERE NOT ignored AND template_id IS NOT NULL {clause}"
 
     rows = con.execute(
         f"""
@@ -169,7 +206,7 @@ def q_top_templates(
         params + [n],
     ).fetchall()
 
-    out = OUTPUT_DIR / f"top-{n}-templates"
+    out = OUT_OVERVIEW / f"top-{n}-templates"
     with open(out, "w", encoding="utf-8") as f:
         f.write(f"Top {n} templates by frequency\n")
         f.write("─" * 60 + "\n")
@@ -180,14 +217,11 @@ def q_top_templates(
 
 def q_fatal_events(
     con: duckdb.DuckDBPyConnection,
-    source_file: Optional[str] = None,
+    source_file: SourceFileArg = None,
 ) -> None:
     """All SEVERE / FATAL / ERROR events that aren't ignored."""
-    where = "WHERE NOT ignored AND level IN ('SEVERE', 'FATAL', 'ERROR')"
-    params = []
-    if source_file:
-        where += " AND source_file = ?"
-        params.append(source_file)
+    clause, params = source_file_clause(source_file)
+    where = f"WHERE NOT ignored AND level IN ('SEVERE', 'FATAL', 'ERROR') {clause}"
 
     rows = con.execute(
         f"""
@@ -199,7 +233,7 @@ def q_fatal_events(
         params,
     ).fetchall()
 
-    out = OUTPUT_DIR / "fatal-events"
+    out = OUT_DEEP_DIVE / "fatal-events"
     with open(out, "w", encoding="utf-8") as f:
         f.write("Fatal events (SEVERE / FATAL / ERROR)\n")
         f.write("─" * 60 + "\n")
@@ -220,23 +254,27 @@ def q_time_filter(
     con: duckdb.DuckDBPyConnection,
     lo: Optional[str] = None,
     hi: Optional[str] = None,
-    source_file: Optional[str] = None,
+    source_file: SourceFileArg = None,
 ) -> None:
     """
     Events in a time range.
 
     lo / hi are ISO or Jenkins timestamp strings.
-    If neither is given, defaults to the last 12 hours of data in the DB.
+    If neither is given, defaults to the last 12 hours of data within the
+    requested scope (i.e. relative to the selected file(s), not the whole DB).
     If only lo is given, returns everything from lo onward.
     If only hi is given, returns everything up to hi.
     """
-    # ── resolve lo/hi against actual data range if not supplied ─────────── #
+    clause, scope_params = source_file_clause(source_file)
+
+    # ── resolve lo/hi against the data range within scope ────────────────── #
     data_min, data_max = con.execute(
-        "SELECT min(timestamp), max(timestamp) FROM log_events"
+        f"SELECT min(timestamp), max(timestamp) FROM log_events WHERE 1=1 {clause}",
+        scope_params,
     ).fetchone()
 
     if lo is None and hi is None:
-        # default: last 12 hours of whatever is in the database
+        # default: last 12 hours of whatever is in scope
         hi_dt  = data_max
         lo_dt  = data_max - timedelta(hours=12)
         label  = "last-12h"
@@ -248,11 +286,8 @@ def q_time_filter(
         hi_tag = str(hi_dt).replace(" ", "T").replace(":", "-")[:19]
         label  = f"{lo_tag}_to_{hi_tag}"
 
-    where  = "WHERE NOT ignored AND timestamp BETWEEN ? AND ?"
-    params: list = [lo_dt, hi_dt]
-    if source_file:
-        where += " AND source_file = ?"
-        params.append(source_file)
+    where  = f"WHERE NOT ignored AND timestamp BETWEEN ? AND ? {clause}"
+    params: list = [lo_dt, hi_dt] + scope_params
 
     rows = con.execute(
         f"""
@@ -264,7 +299,7 @@ def q_time_filter(
         params,
     ).fetchall()
 
-    out = OUTPUT_DIR / f"time-filter-{label}"
+    out = OUT_TIME / f"time-filter-{label}"
     with open(out, "w", encoding="utf-8") as f:
         f.write(f"Time filter: {lo_dt}  →  {hi_dt}\n")
         f.write("─" * 60 + "\n")
@@ -280,7 +315,7 @@ def q_time_filter(
 def q_by_level(
     con: duckdb.DuckDBPyConnection,
     level: str,
-    source_file: Optional[str] = None,
+    source_file: SourceFileArg = None,
 ) -> None:
     """
     Every active event at the given log level.
@@ -288,11 +323,9 @@ def q_by_level(
     """
     level_upper = level.upper()
 
-    where  = "WHERE NOT ignored AND level = ?"
-    params: list = [level_upper]
-    if source_file:
-        where += " AND source_file = ?"
-        params.append(source_file)
+    clause, scope_params = source_file_clause(source_file)
+    where  = f"WHERE NOT ignored AND level = ? {clause}"
+    params: list = [level_upper] + scope_params
 
     rows = con.execute(
         f"""
@@ -304,7 +337,7 @@ def q_by_level(
         params,
     ).fetchall()
 
-    out = OUTPUT_DIR / f"level-{level_upper}"
+    out = OUT_DEEP_DIVE / f"level-{level_upper}"
     with open(out, "w", encoding="utf-8") as f:
         f.write(f"All {level_upper} events ({len(rows)} total)\n")
         f.write("─" * 60 + "\n")
@@ -324,17 +357,15 @@ def q_by_level(
 def q_by_logger(
     con: duckdb.DuckDBPyConnection,
     logger_pattern: str,
-    source_file: Optional[str] = None,
+    source_file: SourceFileArg = None,
 ) -> None:
     """
     Every active event whose logger contains logger_pattern (case-insensitive).
     e.g. logger_pattern="SSHLauncher" matches h.plugins.sshslaves.SSHLauncher
     """
-    where  = "WHERE NOT ignored AND lower(logger) LIKE lower(?)"
-    params: list = [f"%{logger_pattern}%"]
-    if source_file:
-        where += " AND source_file = ?"
-        params.append(source_file)
+    clause, scope_params = source_file_clause(source_file)
+    where  = f"WHERE NOT ignored AND lower(logger) LIKE lower(?) {clause}"
+    params: list = [f"%{logger_pattern}%"] + scope_params
 
     rows = con.execute(
         f"""
@@ -348,7 +379,7 @@ def q_by_logger(
 
     # safe filename — strip characters that are bad in filenames
     safe_pattern = logger_pattern.replace("/", "-").replace("\\", "-")
-    out = OUTPUT_DIR / f"logger-{safe_pattern}"
+    out = OUT_PATTERN / f"logger-{safe_pattern}"
     with open(out, "w", encoding="utf-8") as f:
         f.write(f"Events from logger matching '{logger_pattern}' ({len(rows)} total)\n")
         f.write("─" * 60 + "\n")
@@ -368,21 +399,19 @@ def q_by_logger(
 def q_by_template(
     con: duckdb.DuckDBPyConnection,
     template_id: int,
-    source_file: Optional[str] = None,
+    source_file: SourceFileArg = None,
 ) -> None:
     """
     Every active event belonging to a given DRAIN3 template cluster.
     Use q_top_templates first to find the template_id you want.
     """
-    where  = "WHERE NOT ignored AND template_id = ?"
-    params: list = [template_id]
-    if source_file:
-        where += " AND source_file = ?"
-        params.append(source_file)
+    clause, params = source_file_clause(source_file)
+    where = f"WHERE NOT ignored AND template_id = ? {clause}"
+    params = [template_id] + params
 
     rows = con.execute(
         f"""
-        SELECT line_start, timestamp, level, message, stack_trace, template
+        SELECT line_start, timestamp, level, message, stack_trace, template, source_file
         FROM log_events
         {where}
         ORDER BY timestamp
@@ -392,15 +421,23 @@ def q_by_template(
 
     template_str = rows[0][5] if rows else "unknown"
 
-    out = OUTPUT_DIR / f"template-{template_id}"
+    # per-file breakdown — only meaningful once more than one file is involved
+    files_seen = sorted(set(r[6] for r in rows))
+
+    out = OUT_PATTERN / f"template-{template_id}"
     with open(out, "w", encoding="utf-8") as f:
         f.write(f"Template #{template_id} — {len(rows)} occurrences\n")
         f.write(f"Pattern: {template_str}\n")
+        if len(files_seen) > 1:
+            f.write(f"Appears in {len(files_seen)} files:\n")
+            for fpath in files_seen:
+                count = sum(1 for r in rows if r[6] == fpath)
+                f.write(f"  {count:>6}  {fpath}\n")
         f.write("─" * 60 + "\n")
         if not rows:
             f.write("  (none)\n")
         else:
-            for line, ts, level, msg, stack, tmpl in rows:
+            for line, ts, level, msg, stack, tmpl, fpath in rows:
                 f.write(f"\n  line {line} at {ts}  [{level}]\n")
                 f.write(f"  message: {msg}\n")
                 if stack:
@@ -412,7 +449,7 @@ def q_by_template(
 def q_by_tag(
     con: duckdb.DuckDBPyConnection,
     tag: str,
-    source_file: Optional[str] = None,
+    source_file: SourceFileArg = None,
 ) -> None:
     """
     Every active event carrying the given tag.
@@ -420,11 +457,9 @@ def q_by_tag(
     array string, e.g. '["ssh-failure"]' — this does a substring match
     on that string, which is safe because tag names don't contain quotes.
     """
-    where  = "WHERE NOT ignored AND tags LIKE ?"
-    params: list = [f'%"{tag}"%']
-    if source_file:
-        where += " AND source_file = ?"
-        params.append(source_file)
+    clause, scope_params = source_file_clause(source_file)
+    where  = f"WHERE NOT ignored AND tags LIKE ? {clause}"
+    params: list = [f'%"{tag}"%'] + scope_params
 
     rows = con.execute(
         f"""
@@ -436,7 +471,7 @@ def q_by_tag(
         params,
     ).fetchall()
 
-    out = OUTPUT_DIR / f"tag-{tag}"
+    out = OUT_RULES / f"tag-{tag}"
     with open(out, "w", encoding="utf-8") as f:
         f.write(f"Events tagged '{tag}' ({len(rows)} total)\n")
         f.write("─" * 60 + "\n")
@@ -456,17 +491,14 @@ def q_by_tag(
 
 def q_tag_summary(
     con: duckdb.DuckDBPyConnection,
-    source_file: Optional[str] = None,
+    source_file: SourceFileArg = None,
 ) -> None:
     """
     Breakdown of how many events carry each tag.
     Useful as a quick check that rules actually did something.
     """
-    where = "WHERE NOT ignored AND tags != '[]'"
-    params = []
-    if source_file:
-        where += " AND source_file = ?"
-        params.append(source_file)
+    clause, params = source_file_clause(source_file)
+    where = f"WHERE NOT ignored AND tags != '[]' {clause}"
 
     rows = con.execute(
         f"SELECT tags, count(*) AS n FROM log_events {where} GROUP BY tags ORDER BY n DESC",
@@ -474,16 +506,13 @@ def q_tag_summary(
     ).fetchall()
 
     # also report ignored count, since suppression doesn't show up as a tag
-    ignored_where = "WHERE ignored"
-    ignored_params = []
-    if source_file:
-        ignored_where += " AND source_file = ?"
-        ignored_params.append(source_file)
+    ignored_clause, ignored_params = source_file_clause(source_file)
+    ignored_where = f"WHERE ignored {ignored_clause}"
     ignored_count = con.execute(
         f"SELECT count(*) FROM log_events {ignored_where}", ignored_params
     ).fetchone()[0]
 
-    out = OUTPUT_DIR / "tag-summary"
+    out = OUT_OVERVIEW / "tag-summary"
     with open(out, "w", encoding="utf-8") as f:
         f.write("Tag summary\n")
         f.write("─" * 40 + "\n")
@@ -499,14 +528,11 @@ def q_tag_summary(
 
 def q_stack_traces(
     con: duckdb.DuckDBPyConnection,
-    source_file: Optional[str] = None,
+    source_file: SourceFileArg = None,
 ) -> None:
     """Events that have a stack trace — most useful to hand to an LLM."""
-    where = "WHERE NOT ignored AND stack_trace IS NOT NULL"
-    params = []
-    if source_file:
-        where += " AND source_file = ?"
-        params.append(source_file)
+    clause, params = source_file_clause(source_file)
+    where = f"WHERE NOT ignored AND stack_trace IS NOT NULL {clause}"
 
     rows = con.execute(
         f"""
@@ -518,7 +544,7 @@ def q_stack_traces(
         params,
     ).fetchall()
 
-    out = OUTPUT_DIR / "stack-traces"
+    out = OUT_DEEP_DIVE / "stack-traces"
     with open(out, "w", encoding="utf-8") as f:
         f.write(f"Events with stack traces ({len(rows)} total)\n")
         f.write("─" * 60 + "\n")
@@ -533,9 +559,252 @@ def q_stack_traces(
     print(f"  stack traces       → {out}")
 
 
-# --------------------------------------------------------------------------- #
-# Setup helpers
-# --------------------------------------------------------------------------- #
+def q_cross_file_templates(
+    con: duckdb.DuckDBPyConnection,
+    min_files: int = 2,
+    source_file: SourceFileArg = None,
+) -> None:
+    """
+    Templates that appear in at least min_files distinct source files,
+    with a per-file breakdown. This is the core cross-log correlation query —
+    it answers "which error patterns are recurring across multiple builds."
+
+    Skips writing output if fewer than 2 distinct files are in scope,
+    since the query is meaningless with only one file.
+    """
+    clause, params = source_file_clause(source_file)
+
+    # check how many distinct files are in scope before running the full query
+    file_count = con.execute(
+        f"SELECT count(DISTINCT source_file) FROM log_events WHERE 1=1 {clause}",
+        params,
+    ).fetchone()[0]
+
+    out = OUT_CROSS_FILE / "cross-file-templates"
+    if file_count < 2:
+        with open(out, "w", encoding="utf-8") as f:
+            f.write("Cross-file templates\n")
+            f.write("─" * 60 + "\n")
+            f.write(f"  (only {file_count} file in scope — needs 2+ files to correlate)\n")
+        print(f"  cross-file templates → {out}  (skipped: only {file_count} file in scope)")
+        return
+
+    where = f"WHERE NOT ignored AND template_id IS NOT NULL {clause}"
+
+    rows = con.execute(
+        f"""
+        SELECT template_id, template,
+               count(DISTINCT source_file) AS file_count,
+               count(*) AS total
+        FROM log_events
+        {where}
+        GROUP BY template_id, template
+        HAVING count(DISTINCT source_file) >= ?
+        ORDER BY file_count DESC, total DESC
+        """,
+        params + [min_files],
+    ).fetchall()
+
+    # for each qualifying template, get per-file counts
+    per_file: dict[int, list[tuple]] = {}
+    for tid, _, _, _ in rows:
+        file_rows = con.execute(
+            f"""
+            SELECT source_file, count(*) AS n
+            FROM log_events
+            WHERE NOT ignored AND template_id = ? {clause}
+            GROUP BY source_file
+            ORDER BY n DESC
+            """,
+            [tid] + params,
+        ).fetchall()
+        per_file[tid] = file_rows
+
+    out = OUT_CROSS_FILE / "cross-file-templates"
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(f"Templates appearing in {min_files}+ of {file_count} files\n")
+        f.write("─" * 60 + "\n")
+        if not rows:
+            f.write(f"  (no templates found in {min_files}+ files)\n")
+        else:
+            for i, (tid, tmpl, fcount, total) in enumerate(rows, 1):
+                f.write(f"\n[{i:>2}] #{tid}  {total} total occurrences across {fcount} files\n")
+                f.write(f"     {tmpl}\n")
+                for fpath, n in per_file[tid]:
+                    fname = Path(fpath).name
+                    f.write(f"       {n:>6}  {fname}\n")
+    print(f"  cross-file templates → {out}")
+
+
+def q_file_comparison(
+    con: duckdb.DuckDBPyConnection,
+    file_a: str,
+    file_b: str,
+) -> None:
+    """
+    Side-by-side template frequency comparison between exactly two files.
+    Produces three sections: templates only in A, only in B, and shared
+    (with counts for both). Useful for "what changed between two builds."
+    """
+    stem_a = Path(file_a).name
+    stem_b = Path(file_b).name
+
+    # templates in A
+    rows_a = con.execute(
+        """
+        SELECT template_id, template, count(*) AS n
+        FROM log_events
+        WHERE NOT ignored AND template_id IS NOT NULL AND source_file = ?
+        GROUP BY template_id, template
+        ORDER BY n DESC
+        """,
+        [file_a],
+    ).fetchall()
+
+    # templates in B
+    rows_b = con.execute(
+        """
+        SELECT template_id, template, count(*) AS n
+        FROM log_events
+        WHERE NOT ignored AND template_id IS NOT NULL AND source_file = ?
+        GROUP BY template_id, template
+        ORDER BY n DESC
+        """,
+        [file_b],
+    ).fetchall()
+
+    counts_a = {tid: (tmpl, n) for tid, tmpl, n in rows_a}
+    counts_b = {tid: (tmpl, n) for tid, tmpl, n in rows_b}
+
+    ids_a = set(counts_a)
+    ids_b = set(counts_b)
+    only_a = ids_a - ids_b
+    only_b = ids_b - ids_a
+    shared = ids_a & ids_b
+
+    safe_a = stem_a.replace("/", "-").replace("\\", "-")
+    safe_b = stem_b.replace("/", "-").replace("\\", "-")
+    out = OUT_ON_DEMAND / f"compare-{safe_a}-vs-{safe_b}"
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(f"File comparison\n")
+        f.write(f"  A: {stem_a}\n")
+        f.write(f"  B: {stem_b}\n")
+        f.write("─" * 60 + "\n")
+
+        f.write(f"\n── Shared ({len(shared)} templates) ──────────────────────\n")
+        if not shared:
+            f.write("  (none)\n")
+        else:
+            # sort shared by combined total descending
+            shared_sorted = sorted(
+                shared,
+                key=lambda tid: counts_a[tid][1] + counts_b[tid][1],
+                reverse=True,
+            )
+            for tid in shared_sorted:
+                tmpl, na = counts_a[tid]
+                _, nb = counts_b[tid]
+                f.write(f"\n  #{tid}  {tmpl}\n")
+                f.write(f"    A: {na:>6}   B: {nb:>6}   diff: {nb - na:+d}\n")
+
+        f.write(f"\n── Only in A: {stem_a} ({len(only_a)} templates) ─────────\n")
+        if not only_a:
+            f.write("  (none)\n")
+        else:
+            for tid in sorted(only_a, key=lambda t: counts_a[t][1], reverse=True):
+                tmpl, n = counts_a[tid]
+                f.write(f"\n  #{tid}  x{n}  {tmpl}\n")
+
+        f.write(f"\n── Only in B: {stem_b} ({len(only_b)} templates) ─────────\n")
+        if not only_b:
+            f.write("  (none)\n")
+        else:
+            for tid in sorted(only_b, key=lambda t: counts_b[t][1], reverse=True):
+                tmpl, n = counts_b[tid]
+                f.write(f"\n  #{tid}  x{n}  {tmpl}\n")
+
+    print(f"  comparison         → {out}")
+
+
+def q_template_trend(
+    con: duckdb.DuckDBPyConnection,
+    template_id: int,
+    source_file: SourceFileArg = None,
+) -> None:
+    """
+    Frequency of one template per file, ordered chronologically by each
+    file's earliest timestamp. Shows whether a pattern is growing,
+    shrinking, or stable across builds over time.
+
+    Only meaningful with 2+ files; writes a note and returns early
+    if only one file is in scope.
+    """
+    clause, params = source_file_clause(source_file)
+
+    file_count = con.execute(
+        f"SELECT count(DISTINCT source_file) FROM log_events WHERE 1=1 {clause}",
+        params,
+    ).fetchone()[0]
+
+    # get the template string for the header
+    tmpl_row = con.execute(
+        "SELECT template FROM log_events WHERE template_id = ? AND template IS NOT NULL LIMIT 1",
+        [template_id],
+    ).fetchone()
+    template_str = tmpl_row[0] if tmpl_row else "unknown"
+
+    out = OUT_CROSS_FILE / f"trend-template-{template_id}"
+
+    if file_count < 2:
+        with open(out, "w", encoding="utf-8") as f:
+            f.write(f"Template #{template_id} trend\n")
+            f.write(f"Pattern: {template_str}\n")
+            f.write("─" * 60 + "\n")
+            f.write(f"  (only {file_count} file in scope — needs 2+ files to show a trend)\n")
+        print(f"  trend template #{template_id:<5}  → {out}  (skipped: only {file_count} file)")
+        return
+
+    rows = con.execute(
+        f"""
+        SELECT source_file,
+               min(timestamp) AS first_ts,
+               count(*) AS n
+        FROM log_events
+        WHERE NOT ignored AND template_id = ? {clause}
+        GROUP BY source_file
+        ORDER BY first_ts ASC
+        """,
+        [template_id] + params,
+    ).fetchall()
+
+    # also get files in scope that had zero occurrences of this template
+    all_files = con.execute(
+        f"""
+        SELECT source_file, min(timestamp) AS first_ts
+        FROM log_events
+        WHERE 1=1 {clause}
+        GROUP BY source_file
+        ORDER BY first_ts ASC
+        """,
+        params,
+    ).fetchall()
+
+    counts_by_file = {r[0]: (r[1], r[2]) for r in rows}
+
+    with open(out, "w", encoding="utf-8") as f:
+        f.write(f"Template #{template_id} trend across {file_count} files\n")
+        f.write(f"Pattern: {template_str}\n")
+        f.write("─" * 60 + "\n")
+        for fpath, first_ts in all_files:
+            fname = Path(fpath).name
+            date_str = str(first_ts)[:10]
+            if fpath in counts_by_file:
+                _, n = counts_by_file[fpath]
+                bar = "█" * min(n // 5, 40)
+                f.write(f"  {date_str}  {fname:<40}  {n:>6}  {bar}\n")
+            else:
+                f.write(f"  {date_str}  {fname:<40}       0\n")
+    print(f"  trend template #{template_id:<5}  → {out}")
 
 def open_db(db_path: str) -> duckdb.DuckDBPyConnection:
     """Open (or create) the DuckDB database file and ensure the table exists."""
@@ -551,6 +820,53 @@ def already_loaded(con: duckdb.DuckDBPyConnection, source_file: str) -> bool:
         [source_file],
     ).fetchone()[0]
     return count > 0
+
+
+def resolve_log_paths(inputs: list[str]) -> list[Path]:
+    """
+    Turn CLI arguments into a concrete, de-duplicated list of log file paths.
+
+    Each argument may be:
+      - a path to a single log file -> included directly
+      - a path to a directory -> every *.log file inside it (non-recursive),
+        sorted by filename so processing order is stable across runs
+
+    Raises FileNotFoundError if an argument doesn't exist, so a typo'd path
+    fails loudly instead of silently doing nothing.
+    """
+    resolved: list[Path] = []
+    seen: set[Path] = set()
+
+    for raw in inputs:
+        p = Path(raw).resolve()
+        if not p.exists():
+            raise FileNotFoundError(f"No such file or directory: {raw}")
+
+        if p.is_dir():
+            matches = sorted(p.glob("*.log"))
+            if not matches:
+                print(f"  warning: no *.log files found in directory: {p}")
+            for m in matches:
+                if m not in seen:
+                    resolved.append(m)
+                    seen.add(m)
+        else:
+            if p not in seen:
+                resolved.append(p)
+                seen.add(p)
+
+    return resolved
+
+
+def drain_state_path_for(db_path: str) -> Path:
+    """
+    Derive the DRAIN3 persistence file from the --db path, so the state
+    file always travels with its matching database: jenkins_logs.duckdb
+    pairs with jenkins_logs.drain3.bin in the same directory.
+    """
+    db = Path(db_path)
+    stem = db.name[: -len(db.suffix)] if db.suffix else db.name
+    return db.with_name(f"{stem}.drain3.bin")
 
 
 def load_rules(rules_path: Optional[str]) -> Optional[list[dict]]:
@@ -627,10 +943,12 @@ Columns on log_events:
   source_file                VARCHAR    absolute path of the ingested log file
 
 Dot commands:
-  .schema     show this reference
-  .files      list ingested files and row counts
-  .counts     level breakdown across all loaded data
-  .quit       exit
+  .schema              show this reference
+  .files               list ingested files and row counts
+  .counts              level breakdown across all loaded data
+  .counts <filename>   level breakdown for one specific file (partial name ok)
+  .compare <a> <b>     side-by-side template comparison between two files
+  .quit                exit
 """
 
 
@@ -647,11 +965,17 @@ and the shell will run everything accumulated so far.
 
 Dot commands (no semicolon needed)
 ────────────────────────────────────
-  .help      show this message
-  .schema    show all column names and types on log_events
-  .files     list loaded source files and their row counts
-  .counts    level breakdown (INFO / WARNING / SEVERE) across all data
-  .quit      exit the shell  (also: .exit, Ctrl-D)
+  .help                show this message
+  .schema              show all column names and types on log_events
+  .files               list loaded source files and their row counts
+  .counts              level breakdown across all loaded data
+  .counts <filename>   level breakdown for one file (partial name ok)
+                       e.g.  .counts build_047
+  .compare <a> <b>     side-by-side template comparison between two files
+                       (partial names ok, must be unambiguous)
+                       e.g.  .compare build_047 build_048
+                       writes output file and prints path
+  .quit                exit the shell  (also: .exit, Ctrl-D)
 
 Common query patterns
 ──────────────────────
@@ -688,6 +1012,14 @@ Common query patterns
   WHERE message LIKE '%SSH Launch of%failed%'
   GROUP BY host ORDER BY failures DESC;
 
+  -- cross-file: which templates appear in multiple files?
+  SELECT template_id, template, count(DISTINCT source_file) AS files, count(*) AS n
+  FROM log_events
+  WHERE NOT ignored AND template_id IS NOT NULL
+  GROUP BY template_id, template
+  HAVING count(DISTINCT source_file) > 1
+  ORDER BY files DESC, n DESC LIMIT 10;
+
 Notes
 ──────
   Long values are truncated to 80 chars in display; the full value is in the DB.
@@ -719,7 +1051,12 @@ def run_interactive_shell(con: duckdb.DuckDBPyConnection) -> None:
 
         # dot-commands (only valid when buffer is empty)
         if not buffer and stripped.startswith("."):
-            cmd = stripped.lower()
+            # split on whitespace to extract command and any arguments
+            # use the original stripped (not lowercased) to preserve filename case
+            parts = stripped.split()
+            cmd = parts[0].lower()
+            cmd_args = parts[1:]   # everything after the command word
+
             if cmd in (".quit", ".exit"):
                 break
             elif cmd in (".help", ".h", "?"):
@@ -736,13 +1073,81 @@ def run_interactive_shell(con: duckdb.DuckDBPyConnection) -> None:
                         print(f"  {n:>7} rows  {path}")
                 else:
                     print("  (no files loaded)")
+
             elif cmd == ".counts":
-                rows = con.execute(
-                    "SELECT level, count(*) AS n FROM log_events "
-                    "WHERE NOT ignored GROUP BY level ORDER BY n DESC"
-                ).fetchall()
-                for level, n in rows:
-                    print(f"  {level:<10} {n:>7}")
+                if not cmd_args:
+                    # no argument — level breakdown across everything
+                    rows = con.execute(
+                        "SELECT level, count(*) AS n FROM log_events "
+                        "WHERE NOT ignored GROUP BY level ORDER BY n DESC"
+                    ).fetchall()
+                    for level, n in rows:
+                        print(f"  {level:<10} {n:>7}")
+                else:
+                    # argument is a partial filename — resolve it
+                    pattern = cmd_args[0]
+                    all_files = con.execute(
+                        "SELECT DISTINCT source_file FROM log_events ORDER BY source_file"
+                    ).fetchall()
+                    matches = [r[0] for r in all_files if pattern in r[0]]
+                    if len(matches) == 0:
+                        print(f"  No loaded file matches '{pattern}'")
+                        print(f"  Use .files to see available files")
+                    elif len(matches) > 1:
+                        print(f"  Ambiguous — '{pattern}' matches {len(matches)} files:")
+                        for m in matches:
+                            print(f"    {m}")
+                        print(f"  Use a more specific name")
+                    else:
+                        matched = matches[0]
+                        print(f"  {Path(matched).name}")
+                        rows = con.execute(
+                            "SELECT level, count(*) AS n FROM log_events "
+                            "WHERE NOT ignored AND source_file = ? "
+                            "GROUP BY level ORDER BY n DESC",
+                            [matched],
+                        ).fetchall()
+                        for level, n in rows:
+                            print(f"    {level:<10} {n:>7}")
+
+            elif cmd == ".compare":
+                if len(cmd_args) != 2:
+                    print("  Usage: .compare <file_a> <file_b>")
+                    print("  e.g.   .compare build_047 build_048")
+                else:
+                    pat_a, pat_b = cmd_args[0], cmd_args[1]
+                    all_files = [
+                        r[0] for r in con.execute(
+                            "SELECT DISTINCT source_file FROM log_events ORDER BY source_file"
+                        ).fetchall()
+                    ]
+                    matches_a = [f for f in all_files if pat_a in f]
+                    matches_b = [f for f in all_files if pat_b in f]
+
+                    error = False
+                    if len(matches_a) == 0:
+                        print(f"  No loaded file matches '{pat_a}'")
+                        error = True
+                    elif len(matches_a) > 1:
+                        print(f"  Ambiguous — '{pat_a}' matches {len(matches_a)} files:")
+                        for m in matches_a:
+                            print(f"    {m}")
+                        error = True
+                    if len(matches_b) == 0:
+                        print(f"  No loaded file matches '{pat_b}'")
+                        error = True
+                    elif len(matches_b) > 1:
+                        print(f"  Ambiguous — '{pat_b}' matches {len(matches_b)} files:")
+                        for m in matches_b:
+                            print(f"    {m}")
+                        error = True
+
+                    if not error:
+                        if matches_a[0] == matches_b[0]:
+                            print("  Both patterns resolved to the same file — need two distinct files")
+                        else:
+                            q_file_comparison(con, matches_a[0], matches_b[0])
+
             else:
                 print(f"  Unknown command: {stripped}  (type .help for usage)")
             continue
@@ -806,7 +1211,11 @@ def run_interactive_shell(con: duckdb.DuckDBPyConnection) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Store and query Jenkins logs with DuckDB")
-    parser.add_argument("log_file", help="Path to a Jenkins .log file")
+    parser.add_argument(
+        "log_files",
+        nargs="+",
+        help="One or more Jenkins .log files and/or directories containing .log files",
+    )
     parser.add_argument(
         "--db",
         default="jenkins_logs.duckdb",
@@ -826,47 +1235,64 @@ def main() -> None:
         "--rules",
         metavar="PATH",
         help="Path to a JSON rules file (ignore/tag/set_level), applied during parsing. "
-             "Only takes effect when the file is actually being parsed — i.e. not "
-             "already loaded and not --query-only.",
+             "Only takes effect for files actually being parsed this run.",
     )
     args = parser.parse_args()
-
-    log_path = Path(args.log_file).resolve()
-    source_file = str(log_path)
 
     try:
         rules = load_rules(args.rules)
     except (FileNotFoundError, ValueError) as e:
         parser.error(str(e))
 
+    try:
+        log_paths = resolve_log_paths(args.log_files)
+    except FileNotFoundError as e:
+        parser.error(str(e))
+
+    if not log_paths:
+        parser.error("No log files found from the given arguments.")
+
+    state_path = drain_state_path_for(args.db)
+
     con = open_db(args.db)
     print(f"Database: {args.db}")
+    print(f"DRAIN3 state: {state_path}")
+    print(f"Found {len(log_paths)} log file(s) to consider:")
+    for p in log_paths:
+        print(f"  {p}")
 
-    # ── Insertion ────────────────────────────────────────────────────────── #
-    inserted = False
+    # ── Insertion (loop over every resolved file) ──────────────────────────── #
+    inserted_any = False
     if not args.query_only:
-        if already_loaded(con, source_file):
-            print(f"Already loaded: {log_path.name} — skipping insertion")
-            print("  (pass --query-only to just run queries, or use a fresh DB)")
-            if rules:
-                print("  NOTE: --rules was given but this file is already loaded.")
-                print("        Rules only apply at parse time. To re-apply rules,")
-                print("        use a fresh --db, or delete this file's rows first.")
-        else:
+        print()
+        for log_path in log_paths:
+            source_file = str(log_path)
+            if already_loaded(con, source_file):
+                print(f"Already loaded: {log_path.name} — skipping insertion")
+                if rules:
+                    print("  NOTE: --rules has no effect on already-loaded files.")
+                continue
+
             print(f"Parsing: {log_path.name} ...")
             if rules:
                 print(f"  applying rules from: {args.rules}")
-            events = analyze(log_path, rules=rules)
+            events = analyze(log_path, rules=rules, drain_state_path=state_path)
             print(f"  parsed {len(events)} events")
             n = insert_events(con, events, source_file)
             print(f"  inserted {n} rows into log_events")
-            inserted = True
+            inserted_any = True
     elif rules:
-        print("  NOTE: --rules has no effect with --query-only (no parsing happens).")
+        print("\nNOTE: --rules has no effect with --query-only (no parsing happens).")
+
+    # source_file used by the query section below: None means "all loaded files"
+    # unless exactly one file was given, in which case scope to just that file
+    # for the same single-file behavior as before.
+    source_file = str(log_paths[0]) if len(log_paths) == 1 else None
 
     # ── Preset queries (always run) ──────────────────────────────────────── #
-    print(f"\nWriting query results for: {log_path.name}")
-    print(f"  output dir: {OUTPUT_DIR}")
+    print(f"\nWriting query results")
+    print(f"  scope: {source_file or f'all {len(log_paths)} files in this run'}")
+    print(f"  output dir: {OUTPUT_DIR}/ (organized into subfolders)")
 
     q_level_counts(con, source_file)
     q_top_templates(con, n=10, source_file=source_file)
@@ -911,11 +1337,8 @@ def main() -> None:
     # tags — summary always runs; per-tag files run for whatever tags exist
     q_tag_summary(con, source_file)
 
-    distinct_tags_where = "WHERE NOT ignored AND tags != '[]'"
-    distinct_tags_params = []
-    if source_file:
-        distinct_tags_where += " AND source_file = ?"
-        distinct_tags_params.append(source_file)
+    distinct_tags_clause, distinct_tags_params = source_file_clause(source_file)
+    distinct_tags_where = f"WHERE NOT ignored AND tags != '[]' {distinct_tags_clause}"
 
     tag_rows = con.execute(
         f"SELECT DISTINCT tags FROM log_events {distinct_tags_where}",
@@ -930,8 +1353,15 @@ def main() -> None:
     for tag in sorted(seen_tags):
         q_by_tag(con, tag, source_file)
 
+    # ── Cross-file queries (always run; gracefully skip when only 1 file) ── #
+    q_cross_file_templates(con, min_files=2, source_file=source_file)
+
+    # template trend — reuse the top template already computed above
+    if top_template:
+        q_template_trend(con, top_template[0], source_file)
+
     con.close()
-    if inserted:
+    if inserted_any:
         print(f"\nDone. Database saved to: {args.db}")
     else:
         print(f"\nDone. Queried: {args.db}")

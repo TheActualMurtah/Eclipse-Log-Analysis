@@ -203,9 +203,17 @@ def clean_for_drain(ev: LogEvent, include_throwable_type: bool = True) -> str:
 # --------------------------------------------------------------------------- #
 
 class TemplateExtractor:
-    """Wraps drain3. Falls back to a no-op if drain3 isn't installed."""
+    """
+    Wraps drain3. Falls back to a no-op if drain3 isn't installed.
 
-    def __init__(self):
+    By default (state_path=None) this behaves exactly as before: a fresh,
+    unpersisted parse tree every time. Pass state_path to make the parse
+    tree persist to disk, so the same template_id is reused across
+    separate calls/processes for the same underlying message pattern —
+    required when processing multiple files into the same database.
+    """
+
+    def __init__(self, state_path: Optional[Path] = None):
         self.miner = None
         try:
             from drain3 import TemplateMiner
@@ -224,7 +232,13 @@ class TemplateExtractor:
                 MaskingInstruction(r"\b\d+\b", "NUM"),
             ]
             cfg.drain_sim_th = 0.4   # similarity threshold; tune to taste
-            self.miner = TemplateMiner(config=cfg)
+
+            persistence_handler = None
+            if state_path is not None:
+                from drain3.file_persistence import FilePersistence
+                persistence_handler = FilePersistence(str(state_path))
+
+            self.miner = TemplateMiner(persistence_handler=persistence_handler, config=cfg)
         except Exception as e:  # drain3 missing or failed to init
             self._reason = str(e)
 
@@ -382,11 +396,24 @@ def sys_correspond(jenkins_time: TimeLike, syspath: Path, threshold: timedelta) 
 # 7. Convenience entry point
 # --------------------------------------------------------------------------- #
 
-def analyze(path: Path, rules: Optional[list[dict]] = None) -> list[LogEvent]:
+def analyze(
+    path: Path,
+    rules: Optional[list[dict]] = None,
+    drain_state_path: Optional[Path] = None,
+) -> list[LogEvent]:
+    """
+    Run the full pipeline: parse -> template -> apply rules.
+
+    drain_state_path is optional. When given, DRAIN3's parse tree persists
+    to that file, so template_id stays consistent across separate calls
+    to analyze() (e.g. one call per file when processing multiple logs
+    into the same database). When omitted, behavior is unchanged from
+    before: a fresh, unpersisted tree every call.
+    """
     with open(path, "r", encoding="utf-8", errors="replace") as f:
         text = f.read()
     events = JenkinsLogParser().parse(text)
-    TemplateExtractor().assign(events)
+    TemplateExtractor(state_path=drain_state_path).assign(events)
     if rules:
         RuleSet.from_list(rules).apply(events)
     return events
